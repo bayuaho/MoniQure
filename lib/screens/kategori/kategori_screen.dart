@@ -5,6 +5,7 @@ import '../../utils/app_colors.dart';
 import '../../utils/icon_helper.dart';
 import '../../widgets/custom_drawer.dart';
 import 'form_kategori_screen.dart';
+import '../../services/auth_service.dart';
 
 /// Halaman Manajemen Kategori: tambah, edit, hapus kategori pengguna.
 class KategoriScreen extends StatefulWidget {
@@ -25,9 +26,14 @@ class _KategoriScreenState extends State<KategoriScreen> {
     _loadKategori();
   }
 
-  Future<void> _loadKategori() async {
+Future<void> _loadKategori() async {
     setState(() => _isLoading = true);
-    final list = await _kategoriService.getAllKategori();
+    final userId = await AuthService().getLoggedInUserId();
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    final list = await _kategoriService.getAllKategori(userId);
     if (!mounted) return;
     setState(() {
       _kategoriList = list;
@@ -54,7 +60,7 @@ class _KategoriScreenState extends State<KategoriScreen> {
     );
 
     if (confirm == true) {
-      await _kategoriService.hapusKategori(kategori.id!);
+      await _kategoriService.hapusKategori(kategori.id!, kategori.userId);
       _loadKategori();
     }
   }

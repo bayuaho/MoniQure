@@ -39,17 +39,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
+Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
     final username = await _authService.getLoggedInUsername();
-    final totalPemasukan = await _transaksiService.getTotalPemasukan();
-    final totalPengeluaran = await _transaksiService.getTotalPengeluaran();
-    final saldo = await _transaksiService.getSaldo();
-    final jumlah = await _transaksiService.getJumlahTransaksi();
-    final transaksiList = await _transaksiService.getAllTransaksi();
-    final persentaseKategori = await _transaksiService
-        .getPersentasePengeluaranPerKategori();
+    final userId = await _authService.getLoggedInUserId();
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final totalPemasukan = await _transaksiService.getTotalPemasukan(userId);
+    final totalPengeluaran = await _transaksiService.getTotalPengeluaran(userId);
+    final saldo = await _transaksiService.getSaldo(userId);
+    final jumlah = await _transaksiService.getJumlahTransaksi(userId);
+    final transaksiList = await _transaksiService.getAllTransaksi(userId);
+    final persentaseKategori = await _transaksiService.getPersentasePengeluaranPerKategori(userId);
 
     if (!mounted) return;
     setState(() {
@@ -59,9 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _saldo = saldo;
       _jumlahTransaksi = jumlah;
       _transaksiList = transaksiList;
-      _kategoriTeratas = persentaseKategori.isNotEmpty
-          ? persentaseKategori.first
-          : null;
+      _kategoriTeratas = persentaseKategori.isNotEmpty ? persentaseKategori.first : null;
       _isLoading = false;
     });
   }

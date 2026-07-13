@@ -5,6 +5,7 @@ import '../../services/kategori_service.dart';
 import '../../services/transaksi_service.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/icon_helper.dart';
+import '../../services/auth_service.dart';
 
 /// Form Tambah/Edit Transaksi.
 /// Jika `transaksi` null -> mode Tambah Transaksi.
@@ -50,8 +51,10 @@ class _FormTransaksiScreenState extends State<FormTransaksiScreen> {
     _loadKategori();
   }
 
-  Future<void> _loadKategori() async {
-    final list = await _kategoriService.getAllKategori();
+Future<void> _loadKategori() async {
+    final userId = await AuthService().getLoggedInUserId();
+    if (userId == null) return;
+    final list = await _kategoriService.getAllKategori(userId);
     if (!mounted) return;
     setState(() {
       _kategoriList = list;
@@ -70,7 +73,7 @@ class _FormTransaksiScreenState extends State<FormTransaksiScreen> {
     if (picked != null) setState(() => _tanggal = picked);
   }
 
-  Future<void> _handleSimpan() async {
+Future<void> _handleSimpan() async {
     if (!_formKey.currentState!.validate()) return;
     if (_kategoriId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -81,8 +84,15 @@ class _FormTransaksiScreenState extends State<FormTransaksiScreen> {
 
     setState(() => _isLoading = true);
 
+    final userId = _isEdit ? widget.transaksi!.userId : await AuthService().getLoggedInUserId();
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
     final transaksi = TransaksiModel(
       id: widget.transaksi?.id,
+      userId: userId,
       kategoriId: _kategoriId!,
       jenis: _jenis,
       nominal: double.parse(_nominalController.text.replaceAll(RegExp(r'[^0-9]'), '')),
@@ -126,12 +136,11 @@ class _FormTransaksiScreenState extends State<FormTransaksiScreen> {
     );
 
     if (confirm == true) {
-      await _transaksiService.hapusTransaksi(widget.transaksi!.id!);
+      await _transaksiService.hapusTransaksi(widget.transaksi!.id!, widget.transaksi!.userId);
       if (!mounted) return;
       Navigator.pop(context, true);
     }
   }
-
   @override
   void dispose() {
     _nominalController.dispose();

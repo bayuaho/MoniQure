@@ -10,9 +10,11 @@ extension JenisTransaksiExt on JenisTransaksi {
 }
 
 /// Model untuk tabel `transaksi`.
+/// `userId` menandai transaksi ini milik akun siapa.
 /// `tanggal` disimpan sebagai String format ISO8601 (yyyy-MM-dd).
 class TransaksiModel {
   final int? id;
+  final int userId;
   final int kategoriId;
   final JenisTransaksi jenis;
   final double nominal;
@@ -26,6 +28,7 @@ class TransaksiModel {
 
   TransaksiModel({
     this.id,
+    required this.userId,
     required this.kategoriId,
     required this.jenis,
     required this.nominal,
@@ -39,6 +42,7 @@ class TransaksiModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'user_id': userId,
       'kategori_id': kategoriId,
       'jenis': jenis.value,
       'nominal': nominal,
@@ -47,10 +51,10 @@ class TransaksiModel {
     };
   }
 
-  /// Dipakai untuk hasil query biasa (tanpa join).
   factory TransaksiModel.fromMap(Map<String, dynamic> map) {
     return TransaksiModel(
       id: map['id'] as int?,
+      userId: map['user_id'] as int,
       kategoriId: map['kategori_id'] as int,
       jenis: JenisTransaksiExt.fromString(map['jenis'] as String),
       nominal: (map['nominal'] as num).toDouble(),
@@ -59,11 +63,10 @@ class TransaksiModel {
     );
   }
 
-  /// Dipakai untuk hasil query JOIN dengan tabel kategori
-  /// (dashboard & laporan butuh nama/warna/icon kategori sekaligus).
   factory TransaksiModel.fromJoinMap(Map<String, dynamic> map) {
     return TransaksiModel(
       id: map['id'] as int?,
+      userId: map['user_id'] as int,
       kategoriId: map['kategori_id'] as int,
       jenis: JenisTransaksiExt.fromString(map['jenis'] as String),
       nominal: (map['nominal'] as num).toDouble(),

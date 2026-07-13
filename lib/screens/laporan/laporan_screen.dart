@@ -6,6 +6,7 @@ import '../../utils/format_utils.dart';
 import '../../utils/icon_helper.dart';
 import '../../widgets/custom_drawer.dart';
 import '../../widgets/stat_card.dart';
+import '../../services/auth_service.dart';
 
 /// Halaman Laporan: statistik total, rekap per kategori dengan
 /// progress indicator berwarna, dan Pie Chart sederhana.
@@ -32,13 +33,18 @@ class _LaporanScreenState extends State<LaporanScreen> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
+Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final totalPemasukan = await _transaksiService.getTotalPemasukan();
-    final totalPengeluaran = await _transaksiService.getTotalPengeluaran();
-    final saldo = await _transaksiService.getSaldo();
-    final jumlah = await _transaksiService.getJumlahTransaksi();
-    final persentase = await _transaksiService.getPersentasePengeluaranPerKategori();
+    final userId = await AuthService().getLoggedInUserId();
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    final totalPemasukan = await _transaksiService.getTotalPemasukan(userId);
+    final totalPengeluaran = await _transaksiService.getTotalPengeluaran(userId);
+    final saldo = await _transaksiService.getSaldo(userId);
+    final jumlah = await _transaksiService.getJumlahTransaksi(userId);
+    final persentase = await _transaksiService.getPersentasePengeluaranPerKategori(userId);
 
     if (!mounted) return;
     setState(() {

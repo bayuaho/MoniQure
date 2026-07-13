@@ -3,6 +3,7 @@ import '../../models/kategori_model.dart';
 import '../../services/kategori_service.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/icon_helper.dart';
+import '../../services/auth_service.dart';
 
 /// Form Tambah/Edit Kategori. Jika `kategori` null -> mode tambah,
 /// jika tidak null -> mode edit (field terisi otomatis).
@@ -39,12 +40,19 @@ class _FormKategoriScreenState extends State<FormKategoriScreen> {
     }
   }
 
-  Future<void> _handleSimpan() async {
+Future<void> _handleSimpan() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
+    final userId = _isEdit ? widget.kategori!.userId : await AuthService().getLoggedInUserId();
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
     final kategori = KategoriModel(
       id: widget.kategori?.id,
+      userId: userId,
       nama: _namaController.text.trim(),
       warna: ColorUtils.colorToHex(_selectedColor),
       icon: _selectedIcon,

@@ -9,7 +9,6 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  /// Getter database, otomatis membuat/membuka database jika belum ada.
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -22,13 +21,13 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Tabel User
     await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,50 +36,44 @@ class DatabaseHelper {
       )
     ''');
 
-    // Tabel Kategori
+    // Kolom user_id memastikan setiap kategori hanya milik satu akun,
+    // jadi tidak akan tercampur antar user (ini yang jadi penyebab bug).
     await db.execute('''
       CREATE TABLE kategori (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
         nama TEXT NOT NULL,
         warna TEXT NOT NULL,
-        icon TEXT NOT NULL
+        icon TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
 
-    // Tabel Transaksi (relasi: 1 kategori punya banyak transaksi)
+    // Transaksi juga diberi user_id langsung (bukan cuma lewat kategori)
+    // supaya query filter per-user lebih jelas dan pasti benar.
     await db.execute('''
       CREATE TABLE transaksi (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
         kategori_id INTEGER NOT NULL,
         jenis TEXT NOT NULL,
         nominal REAL NOT NULL,
         tanggal TEXT NOT NULL,
         catatan TEXT,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
         FOREIGN KEY (kategori_id) REFERENCES kategori (id) ON DELETE CASCADE
       )
     ''');
-
-    await _seedKategoriDefault(db);
   }
 
-  /// Mengisi kategori default sesuai contoh pada spesifikasi,
-  /// supaya aplikasi langsung bisa dipakai tanpa setup manual.
-  Future<void> _seedKategoriDefault(Database db) async {
-    final defaults = [
-      {'nama': 'Makanan', 'warna': '#22C55E', 'icon': 'makanan'},
-      {'nama': 'Transportasi', 'warna': '#3B82F6', 'icon': 'transportasi'},
-      {'nama': 'Tagihan', 'warna': '#8B5CF6', 'icon': 'tagihan'},
-      {'nama': 'Belanja', 'warna': '#F97316', 'icon': 'belanja'},
-      {'nama': 'Hiburan', 'warna': '#EC4899', 'icon': 'hiburan'},
-      {'nama': 'Pendidikan', 'warna': '#1D4ED8', 'icon': 'pendidikan'},
-      {'nama': 'Kesehatan', 'warna': '#EF4444', 'icon': 'kesehatan'},
-      {'nama': 'Gaji', 'warna': '#15803D', 'icon': 'gaji'},
-      {'nama': 'Investasi', 'warna': '#06B6D4', 'icon': 'investasi'},
-      {'nama': 'Lainnya', 'warna': '#6B7280', 'icon': 'lainnya'},
-    ];
-
-    for (final kategori in defaults) {
-      await db.insert('kategori', kategori);
+  /// Migrasi dari versi 1 (tanpa user_id) ke versi 2.
+  /// Kalau app di HP sudah pernah dipakai sebelum fix ini, sebaiknya
+  /// uninstall dulu aplikasinya supaya database dibuat ulang dari nol
+  /// dengan skema baru yang benar.
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE kategori ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE transaksi ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0');
     }
   }
 
